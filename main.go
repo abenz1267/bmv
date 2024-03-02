@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -33,7 +32,6 @@ func main() {
 		}
 
 		destDir := filepath.Dir(paths[1])
-		fmt.Println(destDir)
 
 		err := os.MkdirAll(destDir, 0755)
 		if err != nil {
