@@ -2,6 +2,10 @@
 
 Simple cli-tool to bulk rename files. Piped from stdin.
 
+## Install
+
+Arch: `yay -S bmv-bin`
+
 ## Usage Example
 
 ```
