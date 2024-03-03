@@ -21,6 +21,7 @@ import (
 var (
 	nonFlagArgs []string
 	createDirs  bool
+	cleanDirs   bool
 )
 
 var rootCmd = &cobra.Command{
@@ -36,6 +37,11 @@ var rootCmd = &cobra.Command{
 		var err error
 
 		createDirs, err = cc.Flags().GetBool("createdirs")
+		if err != nil {
+			panic(err)
+		}
+
+		cleanDirs, err = cc.Flags().GetBool("cleandirs")
 		if err != nil {
 			panic(err)
 		}
@@ -79,7 +85,7 @@ var rootCmd = &cobra.Command{
 
 			_, err := exec.LookPath(cc.Flags().Args()[0])
 			if errors.Is(err, exec.ErrNotFound) {
-				directMv()
+				passthrough()
 				return
 			} else if err != nil {
 				panic(err)
@@ -110,7 +116,7 @@ func output(reader io.ReadCloser) error {
 	}
 }
 
-func directMv() {
+func passthrough() {
 	mvPath, ok := os.LookupEnv("BMV_MV")
 	if !ok {
 		mvPath = "/usr/bin/mv"
@@ -177,6 +183,7 @@ func init() {
 	// new bmz
 	flags.BoolP("editor", "e", false, "use editor defined by $EDITOR")
 	flags.Bool("createdirs", false, "create missing directories")
+	flags.Bool("cleandirs", false, "cleanup directories that became empty in the process")
 }
 
 func getFiles() []string {
@@ -301,9 +308,9 @@ func move(src, dest string) {
 		}
 	}
 
-	flags := os.Args[1:]
+	flags := slices.Clone(os.Args[1:])
 
-	bmvFlags := []string{"-e", "--createdirs"}
+	bmvFlags := []string{"-e", "--createdirs", "--cleandirs"}
 
 	for _, v := range bmvFlags {
 		for n, m := range flags {
@@ -336,5 +343,26 @@ func move(src, dest string) {
 	err := cmd.Run()
 	if err != nil {
 		log.Println(err)
+	}
+
+	if cleanDirs {
+		clean(src, dest)
+	}
+}
+
+func clean(src, dest string) {
+	a := strings.Split(filepath.Dir(src), "/")
+	b := strings.Split(filepath.Dir(dest), "/")
+
+	for _, p := range [][]string{a, b} {
+		for k, v := range p {
+			if v == "." {
+				continue
+			}
+
+			path := filepath.Join(p[0 : len(p)-k]...)
+
+			_ = os.Remove(path)
+		}
 	}
 }
