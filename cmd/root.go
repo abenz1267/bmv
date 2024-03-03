@@ -37,7 +37,7 @@ var rootCmd = &cobra.Command{
 			}
 
 			if isEditor {
-				withEditor(getFiles(), cc)
+				withEditor(getFiles())
 
 				return
 			}
@@ -62,7 +62,7 @@ var rootCmd = &cobra.Command{
 					panic(string(out))
 				}
 
-				withEditor(strings.Fields(string(out)), cc)
+				withEditor(strings.Fields(string(out)))
 
 				return
 			}
@@ -180,7 +180,12 @@ func getFiles() []string {
 	return files
 }
 
-func withEditor(files []string, cc *cobra.Command) {
+func withEditor(files []string) {
+	if len(files) == 0 {
+		fmt.Println("no files to edit")
+		return
+	}
+
 	editor, ok := os.LookupEnv("EDITOR")
 	if !ok {
 		fmt.Println("env var 'EDITOR' not set.")
@@ -225,6 +230,11 @@ func withEditor(files []string, cc *cobra.Command) {
 }
 
 func withProcessor(files []string) {
+	if len(files) == 0 {
+		fmt.Println("no files to edit")
+		return
+	}
+
 	cmd := exec.Command(nonFlagArgs[0], nonFlagArgs[1:]...)
 
 	pipe, err := cmd.StdinPipe()
