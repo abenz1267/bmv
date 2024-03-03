@@ -176,7 +176,7 @@ func init() {
 
 	// new bmz
 	flags.BoolP("editor", "e", false, "use editor defined by $EDITOR")
-	flags.BoolP("createdirs", "n", false, "create missing directories")
+	flags.Bool("createdirs", false, "create missing directories")
 }
 
 func getFiles() []string {
@@ -279,9 +279,7 @@ func withProcessor(files []string) {
 }
 
 func fromStdin() {
-	files := getFiles()
-
-	for _, v := range files {
+	for _, v := range getFiles() {
 		paths := strings.Fields(v)
 
 		move(paths[0], paths[1])
@@ -305,9 +303,13 @@ func move(src, dest string) {
 
 	flags := os.Args[1:]
 
-	for n, m := range flags {
-		if m == "-e" {
-			flags = slices.Delete(flags, n, n+1)
+	bmvFlags := []string{"-e", "--createdirs"}
+
+	for _, v := range bmvFlags {
+		for n, m := range flags {
+			if m == v {
+				flags = slices.Delete(flags, n, n+1)
+			}
 		}
 	}
 
