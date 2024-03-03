@@ -23,12 +23,12 @@ var (
 	nonFlagArgs []string
 	createDirs  bool
 	cleanDirs   bool
-	bmvFlags    = []string{"-e", "--createdirs", "--cleandirs"}
+	bmvFlags    = []string{"-e", "--editor", "--createdirs", "--cleandirs", "-p", "--processor"}
 )
 
 var rootCmd = &cobra.Command{
 	Use:     "see examples. see 'mv' help.",
-	Example: strings.Join([]string{"normal 'mv' actions: bmv oldfile newfile\n", "bmv specific:", "<2 column output from external [src dest\\n]> | bmv", "ls | bmv -e", "ls | bmv sed 's/old/new/'", "bmv sed 's/old/new/' [implies 'ls']"}, "\n"),
+	Example: strings.Join([]string{"normal 'mv' actions: bmv oldfile newfile\n", "bmv specific:", "<2 column output from external [src dest\\n]> | bmv", "ls | bmv -e", "ls | bmv -p sed 's/old/new/'", "bmv -p sed 's/old/new/' [implicit 'ls']"}, "\n"),
 
 	Short: "Wrapper for mv which allows bulk operations",
 	Long:  `Utility wrapper for mv which enables bulk operations. Internally calls mv, all flags for mv are supported. For example usage, read the readme at https://github.com/abenz1267/bmv. For more detailed information on the flags, see help for mv.`,
@@ -48,6 +48,11 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 
+		useProcessor, err := cc.Flags().GetBool("processor")
+		if err != nil {
+			panic(err)
+		}
+
 		if (fi.Mode() & os.ModeCharDevice) == 0 {
 			isEditor, err := cc.Flags().GetBool("editor")
 			if err != nil {
@@ -56,52 +61,51 @@ var rootCmd = &cobra.Command{
 
 			if isEditor {
 				withEditor(getFiles())
-
 				return
 			}
 
-			if len(nonFlagArgs) > 0 {
+			if len(nonFlagArgs) > 0 && useProcessor {
 				_, err = exec.LookPath(nonFlagArgs[0])
 				if err != nil {
 					panic(err)
 				}
 
 				withProcessor(getFiles())
-
 				return
 			}
 
 			fromStdin()
-		} else {
-			if len(os.Args) == 1 || len(nonFlagArgs) == 0 {
-				cmd := exec.Command("ls")
-				out, err := cmd.CombinedOutput()
-				if err != nil {
-					panic(string(out))
-				}
+			return
+		}
 
-				withEditor(strings.Fields(string(out)))
-
-				return
+		if len(os.Args) == 1 || len(nonFlagArgs) == 0 {
+			cmd := exec.Command("ls")
+			out, err := cmd.CombinedOutput()
+			if err != nil {
+				panic(string(out))
 			}
 
+			withEditor(strings.Fields(string(out)))
+			return
+		}
+
+		if useProcessor && len(nonFlagArgs) > 0 {
 			_, err := exec.LookPath(nonFlagArgs[0])
 			if errors.Is(err, exec.ErrNotFound) || errors.Is(err, fs.ErrPermission) {
-				passthrough()
-				return
-			} else if err != nil {
 				panic(err)
-			} else {
-				cmd := exec.Command("ls")
-				out, err := cmd.CombinedOutput()
-				if err != nil {
-					panic(string(out))
-				}
-
-				withProcessor(strings.Fields(string(out)))
-				return
 			}
+
+			cmd := exec.Command("ls")
+			out, err := cmd.CombinedOutput()
+			if err != nil {
+				panic(string(out))
+			}
+
+			withProcessor(strings.Fields(string(out)))
+			return
 		}
+
+		passthrough()
 	},
 }
 
@@ -202,6 +206,7 @@ func init() {
 
 	// new bmz
 	flags.BoolP("editor", "e", false, "use editor defined by $EDITOR")
+	flags.BoolP("processor", "p", false, "use processor")
 	flags.Bool("createdirs", false, "create missing directories")
 	flags.Bool("cleandirs", false, "cleanup directories that became empty in the process")
 }
@@ -313,7 +318,9 @@ func fromStdin() {
 	for _, v := range getFiles() {
 		paths := strings.Fields(v)
 
-		move(paths[0], paths[1])
+		if len(paths) == 2 {
+			move(paths[0], paths[1])
+		}
 	}
 }
 

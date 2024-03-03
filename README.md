@@ -25,7 +25,7 @@ bmv oldfile newfile
 # bmv specific:
 <2 column output from external [src dest\n]> | bmv
 ls | bmv -e
-ls | bmv sed 's/old/new/'
-bmv sed 's/old/new/' [implies 'ls']
+ls | bmv -p sed 's/old/new/'
+bmv -p sed 's/old/new/' [implies 'ls']
 bmv # ls in $EDITOR
 ```
