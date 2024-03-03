@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -22,6 +23,7 @@ var (
 	nonFlagArgs []string
 	createDirs  bool
 	cleanDirs   bool
+	bmvFlags    = []string{"-e", "--createdirs", "--cleandirs"}
 )
 
 var rootCmd = &cobra.Command{
@@ -71,7 +73,7 @@ var rootCmd = &cobra.Command{
 
 			fromStdin()
 		} else {
-			if len(os.Args) == 1 || len(cc.Flags().Args()) == 0 {
+			if len(os.Args) == 1 || len(nonFlagArgs) == 0 {
 				cmd := exec.Command("ls")
 				out, err := cmd.CombinedOutput()
 				if err != nil {
@@ -83,8 +85,8 @@ var rootCmd = &cobra.Command{
 				return
 			}
 
-			_, err := exec.LookPath(cc.Flags().Args()[0])
-			if errors.Is(err, exec.ErrNotFound) {
+			_, err := exec.LookPath(nonFlagArgs[0])
+			if errors.Is(err, exec.ErrNotFound) || errors.Is(err, fs.ErrPermission) {
 				passthrough()
 				return
 			} else if err != nil {
@@ -122,12 +124,30 @@ func passthrough() {
 		mvPath = "/usr/bin/mv"
 	}
 
-	cmd := exec.Command(mvPath, os.Args[1:]...)
+	if createDirs {
+		create(nonFlagArgs[1])
+	}
+
+	flags := slices.Clone(os.Args[1:])
+
+	for _, v := range bmvFlags {
+		for n, m := range flags {
+			if m == v {
+				flags = slices.Delete(flags, n, n+1)
+			}
+		}
+	}
+
+	cmd := exec.Command(mvPath, flags...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	cmd.Run()
+
+	if cleanDirs {
+		clean(nonFlagArgs[0], nonFlagArgs[1])
+	}
 }
 
 func Execute() {
@@ -299,18 +319,10 @@ func move(src, dest string) {
 	}
 
 	if createDirs {
-		destDir := filepath.Dir(dest)
-
-		err := os.MkdirAll(destDir, 0755)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		create(dest)
 	}
 
 	flags := slices.Clone(os.Args[1:])
-
-	bmvFlags := []string{"-e", "--createdirs", "--cleandirs"}
 
 	for _, v := range bmvFlags {
 		for n, m := range flags {
@@ -347,6 +359,16 @@ func move(src, dest string) {
 
 	if cleanDirs {
 		clean(src, dest)
+	}
+}
+
+func create(dest string) {
+	destDir := filepath.Dir(dest)
+
+	err := os.MkdirAll(destDir, 0755)
+	if err != nil {
+		log.Println(err)
+		return
 	}
 }
 

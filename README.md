@@ -2,6 +2,8 @@
 
 Wrapper around `mv` which allows bulk operations via stdin.
 
+bmv will also create missing diretories and cleanup directories that became empty in the process. Both are configurable via flags.
+
 ## Installation
 
 ```sh
