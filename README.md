@@ -8,7 +8,7 @@ bmv will also create missing directories and cleanup directories that became emp
 
 ```sh
 # Arch
-yay -S bmv-git
+yay -S bmv-bin
 
 # via Go
 go install github.com/abenz126/bmv@latest
