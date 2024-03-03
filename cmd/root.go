@@ -18,7 +18,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var nonFlagArgs []string
+var (
+	nonFlagArgs []string
+	createDirs  bool
+)
 
 var rootCmd = &cobra.Command{
 	Use:     "see examples. see 'mv' help.",
@@ -29,6 +32,13 @@ var rootCmd = &cobra.Command{
 	Run: func(cc *cobra.Command, args []string) {
 		fi, _ := os.Stdin.Stat()
 		nonFlagArgs = cc.Flags().Args()
+
+		var err error
+
+		createDirs, err = cc.Flags().GetBool("createdirs")
+		if err != nil {
+			panic(err)
+		}
 
 		if (fi.Mode() & os.ModeCharDevice) == 0 {
 			isEditor, err := cc.Flags().GetBool("editor")
@@ -142,6 +152,7 @@ func (s *stringValue) String() string { return string(*s) }
 func init() {
 	flags := rootCmd.Flags()
 
+	// mv flags
 	backup := newStringValue("", new(string))
 	backupFlag := flags.VarPF(backup, "backup", "b", "make a backup of each existing destination file")
 	backupFlag.NoOptDefVal = "$VERSION_CONTROL"
@@ -150,7 +161,6 @@ func init() {
 	updateFlag := flags.VarPF(update, "update", "u", "control which existing files are updated. See mv --help for more info.")
 	updateFlag.NoOptDefVal = "older"
 
-	flags.BoolP("editor", "e", false, "use editor defined by $EDITOR")
 	flags.Bool("debug", false, "explain how a file is copied.  Implies -v")
 	flags.BoolP("force", "f", false, "do not prompt before overwriting")
 	flags.BoolP("interactive", "i", false, "prompt before overwrite")
@@ -163,6 +173,10 @@ func init() {
 	flags.BoolP("verbose", "v", false, "explain what is being done")
 	flags.BoolP("context", "Z", false, "set SELinux security context of destination file to default type")
 	flags.Bool("version", false, "output version information and exit")
+
+	// new bmz
+	flags.BoolP("editor", "e", false, "use editor defined by $EDITOR")
+	flags.BoolP("createdirs", "n", false, "create missing directories")
 }
 
 func getFiles() []string {
@@ -279,12 +293,14 @@ func move(src, dest string) {
 		return
 	}
 
-	destDir := filepath.Dir(dest)
+	if createDirs {
+		destDir := filepath.Dir(dest)
 
-	err := os.MkdirAll(destDir, 0755)
-	if err != nil {
-		log.Println(err)
-		return
+		err := os.MkdirAll(destDir, 0755)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	}
 
 	flags := os.Args[1:]
@@ -315,7 +331,7 @@ func move(src, dest string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		log.Println(err)
 	}
