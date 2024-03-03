@@ -401,14 +401,13 @@ func clean(src, dest string) {
 }
 
 func avoidCircularRenames(files, renames []string) {
-	for k, v := range files {
-		if v == renames[k] {
-			continue
+	for b, v := range renames {
+		for k, m := range files {
+			if v == m && k != b {
+				nn := m + "_tmp_900314"
+				files[k] = nn
+				move(m, nn)
+			}
 		}
-
-		nn := v + "_bmv"
-		files[k] = nn
-
-		move(v, nn)
 	}
 }
