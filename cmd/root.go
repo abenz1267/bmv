@@ -263,6 +263,8 @@ func withEditor(files []string) {
 		panic(fmt.Sprintf("expected %d files, got %d", len(files), len(toMove)))
 	}
 
+	avoidCircularRenames(files, toMove)
+
 	for k, v := range files {
 		if toMove[k] != v {
 			move(v, toMove[k])
@@ -299,6 +301,8 @@ func withProcessor(files []string) {
 	if len(n) != len(files) {
 		panic(fmt.Sprintf("expected %d files, got %d", len(files), len(n)))
 	}
+
+	avoidCircularRenames(files, n)
 
 	for k, v := range files {
 		move(v, n[k])
@@ -386,5 +390,18 @@ func clean(src, dest string) {
 
 			_ = os.Remove(path)
 		}
+	}
+}
+
+func avoidCircularRenames(files, renames []string) {
+	for k, v := range files {
+		if v == renames[k] {
+			continue
+		}
+
+		nn := v + "_bmv"
+		files[k] = nn
+
+		move(v, nn)
 	}
 }
