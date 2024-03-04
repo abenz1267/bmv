@@ -232,6 +232,19 @@ func withEditor(files []string) {
 		return
 	}
 
+	for k, v := range files {
+		info, err := os.Stat(v)
+		if err != nil {
+			panic(err)
+		}
+
+		if info.IsDir() && !strings.HasSuffix(v, "/") {
+			files[k] = v + "/"
+		}
+	}
+
+	slices.Sort(files)
+
 	editor, ok := os.LookupEnv("EDITOR")
 	if !ok {
 		fmt.Println("env var 'EDITOR' not set.")
