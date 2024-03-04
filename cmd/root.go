@@ -83,7 +83,7 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		if (len(os.Args) == 1 || editor != "") && len(nonFlagArgs) == 0 {
+		if len(nonFlagArgs) == 0 {
 			cmd := exec.Command("ls")
 			out, err := cmd.CombinedOutput()
 			if err != nil {
