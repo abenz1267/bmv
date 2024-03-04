@@ -28,7 +28,7 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:     "see examples. see 'mv' help.",
-	Example: strings.Join([]string{"normal 'mv' actions: bmv oldfile newfile\n", "bmv specific:", "<2 column output from external [src dest\\n]> | bmv", "ls | bmv -e", "ls | bmv -p sed 's/old/new/'", "bmv -p sed 's/old/new/' [implicit 'ls']"}, "\n"),
+	Example: strings.Join([]string{"normal 'mv' actions: bmv oldfile newfile\n", "bmv specific:", "<2 column output from external [src dest\\n]> | bmv", "ls | bmv -e", "ls | bmv -e=vim", "ls | bmv -p sed 's/old/new/'", "bmv -p sed 's/old/new/' [implicit 'ls']"}, "\n"),
 
 	Short: "Wrapper for mv which allows bulk operations",
 	Long:  `Utility wrapper for mv which enables bulk operations. Internally calls mv, all flags for mv are supported. For example usage, read the readme at https://github.com/abenz1267/bmv. For more detailed information on the flags, see help for mv.`,
@@ -53,6 +53,21 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 
+		editor, err := cc.Flags().GetString("editor")
+		if err != nil {
+			panic(err)
+		}
+
+		if editor == "$EDITOR" {
+			var ok bool
+
+			editor, ok = os.LookupEnv("EDITOR")
+			if !ok {
+				fmt.Println("env var 'EDITOR' not set.")
+				os.Exit(1)
+			}
+		}
+
 		if (fi.Mode() & os.ModeCharDevice) == 0 {
 			isEditor, err := cc.Flags().GetBool("editor")
 			if err != nil {
@@ -60,7 +75,7 @@ var rootCmd = &cobra.Command{
 			}
 
 			if isEditor {
-				withEditor(getFiles())
+				withEditor(getFiles(), editor)
 				return
 			}
 
@@ -85,7 +100,7 @@ var rootCmd = &cobra.Command{
 				panic(string(out))
 			}
 
-			withEditor(strings.Fields(string(out)))
+			withEditor(strings.Fields(string(out)), editor)
 			return
 		}
 
@@ -205,7 +220,12 @@ func init() {
 	flags.Bool("version", false, "output version information and exit")
 
 	// new bmz
-	flags.BoolP("editor", "e", false, "use editor defined by $EDITOR")
+
+	// mv flags
+	editor := newStringValue("", new(string))
+	editorFlag := flags.VarPF(editor, "editor", "e", "use editor, default: $EDITOR")
+	editorFlag.NoOptDefVal = "$EDITOR"
+
 	flags.BoolP("processor", "p", false, "use processor")
 	flags.Bool("createdirs", false, "create missing directories")
 	flags.Bool("cleandirs", false, "cleanup directories that became empty in the process")
@@ -226,7 +246,7 @@ func getFiles() []string {
 	return files
 }
 
-func withEditor(files []string) {
+func withEditor(files []string, editor string) {
 	if len(files) == 0 {
 		fmt.Println("no files to edit")
 		return
@@ -244,12 +264,6 @@ func withEditor(files []string) {
 	}
 
 	slices.Sort(files)
-
-	editor, ok := os.LookupEnv("EDITOR")
-	if !ok {
-		fmt.Println("env var 'EDITOR' not set.")
-		os.Exit(1)
-	}
 
 	dest, err := os.CreateTemp("", "*")
 	if err != nil {

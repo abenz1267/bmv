@@ -34,7 +34,8 @@ bmv oldfile newfile
 
 # bmv specific:
 <2 column output from external [src dest\n]> | bmv
-fzf -m | bmv -e
+fzf -m | bmv -e # defaults to $EDITOR
+fzf -m | bmv -e=vim
 ls | bmv -p sed 's/old/new/'
 bmv -p sed 's/old/new/' # implicit call to 'ls'
 bmv # same as 'ls | bmv -e'
