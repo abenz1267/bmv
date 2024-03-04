@@ -53,28 +53,13 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		editor, err := cc.Flags().GetString("editor")
-		if err != nil {
-			panic(err)
-		}
-
-		if editor == "$EDITOR" {
-			var ok bool
-
-			editor, ok = os.LookupEnv("EDITOR")
-			if !ok {
-				fmt.Println("env var 'EDITOR' not set.")
-				os.Exit(1)
-			}
-		}
-
 		if (fi.Mode() & os.ModeCharDevice) == 0 {
-			isEditor, err := cc.Flags().GetBool("editor")
+			editor, err := cc.Flags().GetString("editor")
 			if err != nil {
 				panic(err)
 			}
 
-			if isEditor {
+			if editor != "" {
 				withEditor(getFiles(), editor)
 				return
 			}
@@ -93,11 +78,20 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		if len(os.Args) == 1 || len(nonFlagArgs) == 0 {
+		editor, err := cc.Flags().GetString("editor")
+		if err != nil {
+			panic(err)
+		}
+
+		if (len(os.Args) == 1 || editor != "") && len(nonFlagArgs) == 0 {
 			cmd := exec.Command("ls")
 			out, err := cmd.CombinedOutput()
 			if err != nil {
 				panic(string(out))
+			}
+
+			if editor == "" {
+				editor = "$EDITOR"
 			}
 
 			withEditor(strings.Fields(string(out)), editor)
@@ -247,6 +241,16 @@ func getFiles() []string {
 }
 
 func withEditor(files []string, editor string) {
+	if editor == "$EDITOR" {
+		var ok bool
+
+		editor, ok = os.LookupEnv("EDITOR")
+		if !ok {
+			fmt.Println("$EDITOR not set")
+			os.Exit(1)
+		}
+	}
+
 	if len(files) == 0 {
 		fmt.Println("no files to edit")
 		return
