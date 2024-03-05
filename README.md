@@ -18,6 +18,7 @@ bmv will also create missing directories and cleanup directories that became emp
 
 ```sh
 # Arch
+yay -S bmv
 yay -S bmv-bin
 
 # via Go
