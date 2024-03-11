@@ -395,7 +395,6 @@ func move(src, dest string) {
 	cmd.Stderr = os.Stderr
 
 	err := cmd.Run()
-	fmt.Println(cmd.String())
 	if err != nil {
 		log.Println(err)
 	}
