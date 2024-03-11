@@ -420,6 +420,10 @@ func create(dest string) {
 }
 
 func clean(src, dest string) {
+	if strings.HasSuffix(dest, string(filepath.Separator)) {
+		return
+	}
+
 	a := strings.Split(filepath.Dir(src), "/")
 	b := strings.Split(filepath.Dir(dest), "/")
 
