@@ -118,6 +118,43 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+func init() {
+	flags := rootCmd.Flags()
+
+	// mv flags
+	backup := newStringValue("", new(string))
+	backupFlag := flags.VarPF(backup, "backup", "b", "make a backup of each existing destination file")
+	backupFlag.NoOptDefVal = "$VERSION_CONTROL"
+
+	update := newStringValue("", new(string))
+	updateFlag := flags.VarPF(update, "update", "u", "control which existing files are updated. See mv --help for more info.")
+	updateFlag.NoOptDefVal = "older"
+
+	flags.Bool("debug", false, "explain how a file is copied.  Implies -v")
+	flags.BoolP("force", "f", false, "do not prompt before overwriting")
+	flags.BoolP("interactive", "i", false, "prompt before overwrite")
+	flags.BoolP("no-clobber", "n", false, "do not overwrite an existing file")
+	flags.Bool("no-copy", false, "do not copy if renaming fails")
+	flags.Bool("strip-trailing-slashes", false, "remove any trailing slashes from each SOURCE argument")
+	flags.StringP("suffix", "S", "", "override the usual backup suffix")
+	flags.StringP("target-directory", "t", "", "move all SOURCE arguments into DIRECTORY")
+	flags.BoolP("no-target-directory", "T", false, "treat DEST as a normal file")
+	flags.BoolP("verbose", "v", false, "explain what is being done")
+	flags.BoolP("context", "Z", false, "set SELinux security context of destination file to default type")
+	flags.Bool("version", false, "output version information and exit")
+
+	// new bmz
+
+	// mv flags
+	editor := newStringValue("", new(string))
+	editorFlag := flags.VarPF(editor, "editor", "e", "use editor, default: $EDITOR")
+	editorFlag.NoOptDefVal = "$EDITOR"
+
+	flags.BoolP("processor", "p", false, "use processor")
+	flags.Bool("createdirs", false, "create missing directories")
+	flags.Bool("cleandirs", false, "cleanup directories that became empty in the process")
+}
+
 func output(reader io.ReadCloser) error {
 	buf := make([]byte, 1024)
 	for {
@@ -187,43 +224,6 @@ func (s *stringValue) Type() string {
 }
 
 func (s *stringValue) String() string { return string(*s) }
-
-func init() {
-	flags := rootCmd.Flags()
-
-	// mv flags
-	backup := newStringValue("", new(string))
-	backupFlag := flags.VarPF(backup, "backup", "b", "make a backup of each existing destination file")
-	backupFlag.NoOptDefVal = "$VERSION_CONTROL"
-
-	update := newStringValue("", new(string))
-	updateFlag := flags.VarPF(update, "update", "u", "control which existing files are updated. See mv --help for more info.")
-	updateFlag.NoOptDefVal = "older"
-
-	flags.Bool("debug", false, "explain how a file is copied.  Implies -v")
-	flags.BoolP("force", "f", false, "do not prompt before overwriting")
-	flags.BoolP("interactive", "i", false, "prompt before overwrite")
-	flags.BoolP("no-clobber", "n", false, "do not overwrite an existing file")
-	flags.Bool("no-copy", false, "do not copy if renaming fails")
-	flags.Bool("strip-trailing-slashes", false, "remove any trailing slashes from each SOURCE argument")
-	flags.StringP("suffix", "S", "", "override the usual backup suffix")
-	flags.StringP("target-directory", "t", "", "move all SOURCE arguments into DIRECTORY")
-	flags.BoolP("no-target-directory", "T", false, "treat DEST as a normal file")
-	flags.BoolP("verbose", "v", false, "explain what is being done")
-	flags.BoolP("context", "Z", false, "set SELinux security context of destination file to default type")
-	flags.Bool("version", false, "output version information and exit")
-
-	// new bmz
-
-	// mv flags
-	editor := newStringValue("", new(string))
-	editorFlag := flags.VarPF(editor, "editor", "e", "use editor, default: $EDITOR")
-	editorFlag.NoOptDefVal = "$EDITOR"
-
-	flags.BoolP("processor", "p", false, "use processor")
-	flags.Bool("createdirs", false, "create missing directories")
-	flags.Bool("cleandirs", false, "cleanup directories that became empty in the process")
-}
 
 func getFiles() []string {
 	files := []string{}
@@ -395,6 +395,7 @@ func move(src, dest string) {
 	cmd.Stderr = os.Stderr
 
 	err := cmd.Run()
+	fmt.Println(cmd.String())
 	if err != nil {
 		log.Println(err)
 	}
@@ -405,6 +406,10 @@ func move(src, dest string) {
 }
 
 func create(dest string) {
+	if strings.HasSuffix(dest, string(filepath.Separator)) {
+		dest = strings.TrimSuffix(dest, string(filepath.Separator))
+	}
+
 	destDir := filepath.Dir(dest)
 
 	err := os.MkdirAll(destDir, 0755)
